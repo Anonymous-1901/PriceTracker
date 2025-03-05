@@ -1,0 +1,85 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="icon" href="{% static 'imgs/favicon.png' %}" type="image/png">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>{% block title %}Price Tracker{% endblock %}</title>
+    <style>
+        html, body {
+            height: 100%; /* Ensure body takes full height */
+            margin: 0; /* Remove default margin */
+        }
+        .wrapper {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh; /* Full viewport height */
+        }
+        .content {
+            flex: 1; /* Take up available space */
+        }
+        .footer {
+            background-color: #f8f9fa; /* Light background for footer */
+            text-align: center;
+            padding: 1rem; /* Padding for footer */
+        }
+        .navbar-brand img {
+            height: 50px; /* Increase the height of the favicon */
+            width: auto; /* Maintain aspect ratio */
+            vertical-align: middle; /* Align vertically in the middle */
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <nav class="navbar navbar-expand-lg navbar-light bg-primary">  
+            <a class="navbar-brand text-white h4 ml-3" href="#">
+                <img src="{% static 'imgs/favicon.png' %}" alt="Logo"> <!-- Add logo here -->
+                Price Tracker
+            </a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ml-auto">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link text-white mr-3" href="{% url 'add_product' %}">Search Product</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white mr-3" href="{% url 'my_alerts' %}">My Alerts</a>
+                        </li>
+                        <li class="nav-item mx-2">
+                            <a class="nav-link text-white mr-3" href="{% url 'profile' %}">Profile</a>
+                        </li>
+                        <li class="nav-item">
+                            <form method="POST" action="{% url 'logout' %}" class="form-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger mr-3">Logout</button>
+                            </form>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link text-white mr-3" href="{% url 'login' %}">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white mr-3" href="{% url 'register' %}">Register</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </nav>
+
+        <div class="container mt-5 content">
+            {% block content %}
+            {% endblock %}
+        </div>
+
+        <footer class="footer">
+            <p>&copy; 2024 Price Tracker. All Rights Reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>

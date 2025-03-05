@@ -1,0 +1,91 @@
+<!-- templates/mail_template.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price Drop Alert</title>
+    <style>
+        /* General reset and styles */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f8;
+        }
+        table {
+            max-width: 600px;
+            margin: auto;
+            border-collapse: collapse;
+        }
+        .container {
+            width: 100%;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background-color: #007bff;
+            color: #ffffff;
+            padding: 10px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+            color: #333333;
+        }
+        .product-info {
+            text-align: center;
+        }
+        .product-info img {
+            width: 100%;
+            max-width: 150px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        /* Responsive adjustments */
+        @media only screen and (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            .content {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <table role="presentation">
+        <tr>
+            <td class="container">
+                <div class="header">
+                    <h1>Price Drop Alert</h1>
+                </div>
+                <div class="content">
+                    <p>Hello {{ username }},</p>
+                    <p>Good news! <br><br>The price of <strong>{{ product_name }}</strong> has dropped to your desired price of <strong>{{ desired_price }}</strong>.</p>
+
+                    <div class="product-info">
+                        <img src="{{ product_image_url }}" alt="{{ product_name }}">
+                        <p><strong>Price:</strong> {{ desired_price }}</p>
+                    </div>
+
+                    <p>Click the button below to check out the product:</p>
+                    <a href="{{ product_url }}" class="btn">View Product</a>
+                </div>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

@@ -1,0 +1,393 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Home - Price Tracker{% endblock %}
+
+{% block content %}
+<div class="text-center mb-5">
+    <h3 class="display-4">Welcome to Price Tracker, {{ username }}!</h3>
+    <p class="lead">Track the best prices and make informed purchase decisions.<br> Paste a product link below to get started!</p>
+</div>
+<form id="product-form" class="form-inline" onsubmit="return fetchProductData(event);">
+    {% csrf_token %}
+    <div class="input-group mb-3" style="width: 100%;">
+        <input type="url" class="form-control" id="product-url" name="product_url" placeholder="Enter product URL" required>
+        <div class="input-group-append">
+            <button class="btn btn-primary" type="submit">Search</button>
+        </div>
+    </div>
+</form>
+<input type="hidden" name="scrape_url" id="scrape_url">
+<div id="product-preview" class="mt-4"></div>
+
+<!-- Price Summary Section -->
+<div id="price-summary" class="mt-3" style="display: none;">
+    <div class="price-info">
+        <span class="price lowest">Lowest: ₹<span id="lowest-price"></span></span>
+        <span class="price current">Current: ₹<span id="current-price"></span></span>
+        <span class="price average">Average: ₹<span id="average-price"></span></span>
+        <span class="price highest">Highest: ₹<span id="highest-price"></span></span>
+    </div>
+</div>
+
+<canvas id="priceChart" width="400" height="200"></canvas>
+
+<script>
+    let chart;
+    function fetchProductData(event) {
+        event.preventDefault(); // Prevent the form from submitting the default way
+        if (chart) {
+            chart.destroy();
+        }
+        const productUrl = document.getElementById('product-url').value;
+        const previewDiv = document.getElementById('product-preview');
+        const priceSummaryDiv = document.getElementById('price-summary');
+
+        previewDiv.innerHTML = '<p>Fetching data...</p>'; // Show fetching message
+
+        fetch("{% url 'get_product_data' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ 'product_url': productUrl })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log(data);
+            if (data.error) {
+                previewDiv.innerHTML = `<p class="text-danger">${data.error}</p>`;
+                priceSummaryDiv.style.display = 'none'; // Hide price summary if there's an error
+            } else {
+                previewDiv.innerHTML = `
+                    <div class="product-container">
+                        <div class="product-info">
+                            <h2 class="product-title" id="product-title">${data.name}</h2>
+                            <p class="product-price">Price: <strong>${data.price}</strong></p>
+                            <b>Should You Buy this product now?</b>
+                            <div class="product-prediction ${data.prediction.class}">${data.prediction.text}</div>
+
+                            <!-- Create Alert Button -->
+                            <button class="btn btn-secondary mt-2" id="create-alert-btn" onclick="showAlertInput()">Create Alert</button>
+                            <div id="message-container" class="mt-3"></div>
+                            <div id="alert-input-container" style="display: none; margin-top: 10px;">
+                                <input type="number" id="alert-price" placeholder="Desired Price" class="form-control" style="width: auto; display: inline-block;">
+                                <button class="btn btn-success" onclick="createAlert(${data.id})">Set Alert</button>
+                            </div>
+                        </div>
+                        <div class="product-image">
+                            <img src="${data.image}" alt="${data.name}" style="max-width: 300px; height: auto;">
+                        </div>
+                    </div>
+                `;
+                
+                // Update price summary
+                document.getElementById('lowest-price').innerText = data.lowestPrice || '0';
+                document.getElementById('current-price').innerText = data.price || '0';
+                document.getElementById('average-price').innerText = data.averagePrice || '0';
+                document.getElementById('highest-price').innerText = data.highestPrice || '0';
+                priceSummaryDiv.style.display = 'block'; // Show price summary
+                document.getElementById('scrape_url').value = data.scrape_url
+                renderChart(data); // Call function to render chart with data
+            }
+        })
+        .catch(error => {
+            previewDiv.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+            priceSummaryDiv.style.display = 'none'; // Hide price summary on error
+        });
+
+        return false; // Prevent default form submission
+    }
+
+    /* function showAlertInput() {
+        const alertInputContainer = document.getElementById('alert-input-container');
+        alertInputContainer.style.display = 'block'; // Show the input box for the alert
+    }*/
+
+    function showAlertInput(productName, productImage, currentPrice, productUrl) {
+        const alertInputContainer = document.getElementById('alert-input-container');
+        alertInputContainer.style.display = 'block'; // Show the input box for the alert
+
+        // Store product details for later use in the createAlert function
+        document.getElementById('alert-input-container').setAttribute('data-product-name', productName);
+        document.getElementById('alert-input-container').setAttribute('data-product-image', productImage);
+        document.getElementById('alert-input-container').setAttribute('data-current-price', currentPrice);
+        document.getElementById('alert-input-container').setAttribute('data-product-url', productUrl);
+    }
+ 
+    /*function createAlert() {
+        const alertPriceInput = document.getElementById('alert-price');
+        const alertPrice = alertPriceInput.value;
+        const productName = document.getElementById('product-title').innerHTML;
+        const productImageUrl = document.querySelector('.product-image img').src; // Assuming there's an image
+        const productUrl = document.getElementById('scrape_url').value; // Use the original product URL
+        console.log("PRODUCT NAME : ",productName)
+        // Clear previous error message
+        const errorMessage = document.getElementById('error-message');
+        if (errorMessage) {
+            errorMessage.textContent = '';
+        }
+    
+        // Validate desired price
+        if (!alertPrice || isNaN(alertPrice) || parseFloat(alertPrice) <= 0) {
+            // Display error message in red
+            alertPriceInput.insertAdjacentHTML('afterend', '<div id="error-message" style="color: red;">Please set a desired price.</div>');
+            return; // Prevent request to server
+        }
+    
+        // Proceed with creating the alert if the desired price is valid
+        fetch("{% url 'create_alert' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                product_url: productUrl,
+                desired_price: parseFloat(alertPrice),
+                product_image_url: productImageUrl,
+                product_name : productName
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                document.getElementById('alert-input-container').style.display = 'none'; // Hide alert input
+            } else {
+                alert(`Error: ${data.message}`);
+            }
+        })
+        .catch(error => {
+            alert(`Error: ${error.message}`);
+        });
+    }*/
+    
+
+    function createAlert() {
+        const alertPriceInput = document.getElementById('alert-price');
+        const alertPrice = alertPriceInput.value;
+        const productName = document.getElementById('product-title').innerHTML;
+        const productImageUrl = document.querySelector('.product-image img').src;
+        const productUrl = document.getElementById('product-url').value;
+
+    
+        // Clear previous messages
+        const messageContainer = document.getElementById('message-container');
+        messageContainer.innerHTML = '';
+    
+        // Validate desired price
+        if (!alertPrice || isNaN(alertPrice) || parseFloat(alertPrice) <= 0) {
+            // Display error message in red
+            messageContainer.innerHTML = '<div style="color: red;">Please set a desired price.</div>';
+            return; // Prevent request to server
+        }
+    
+        // Proceed with creating the alert if the desired price is valid
+        fetch("{% url 'create_alert' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                product_url: productUrl,
+                desired_price: parseFloat(alertPrice),
+                product_image_url: productImageUrl,
+                product_name : productName
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                messageContainer.innerHTML = `<div style="color: green;">${data.message}</div>`;
+                document.getElementById('alert-input-container').style.display = 'none'; // Hide alert input
+            } else {
+                messageContainer.innerHTML = `<div style="color: red;">Error: ${data.message}</div>`;
+            }
+        })
+        .catch(error => {
+            messageContainer.innerHTML = `<div style="color: red;">Error: ${error.message}</div>`;
+        });
+    }
+    
+
+
+    function parsePrice(priceString) {
+        return parseFloat(priceString.replace(/[₹,]/g, '').trim());
+    }
+
+    function renderChart(data) {
+        const highestPrice = parsePrice(data.highestPrice);
+        const lowestPrice = parsePrice(data.lowestPrice);
+        const currentPrice = parsePrice(data.price);
+        const averagePrice = parsePrice(data.averagePrice);
+
+        console.log("Chart Data:", {
+            highest: highestPrice,
+            lowest: lowestPrice,
+            current: currentPrice,
+            average: averagePrice,
+        });
+
+        const ctx = document.getElementById('priceChart').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'line', // Change to 'bar', 'pie', etc. as needed
+            data: {
+                labels: ['Highest', 'Lowest', 'Current', 'Average'],
+                datasets: [{
+                    label: 'Price Overview',
+                    data: [
+                        highestPrice || 0, // Use 0 if undefined
+                        lowestPrice || 0,
+                        currentPrice || 0,
+                        averagePrice || 0,
+                    ],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Price'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '₹' + value.toLocaleString(); // Format value as currency
+                            }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Price Type'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+</script>
+
+<style>
+    .product-container {
+        display: flex;
+        align-items: center;
+        border: 1px solid #ccc;
+        padding: 10px;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+    }
+    .product-info {
+        flex: 1;
+        padding: 10px;
+    }
+    .product-title {
+        font-size: 1.5em; /* Adjusted font size for title */
+        margin-bottom: 10px;
+    }
+    .product-price {
+        font-size: 1.2em;
+        margin: 5px 0;
+    }
+    .product-prediction {
+        font-weight: bold;
+        padding: 5px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+    /* Color coding for predictions */
+    .prediction-buy {
+        color: green;
+        background-color: #d4edda;
+    }
+    .prediction-skip {
+        color: red;
+        background-color: #f8d7da;
+    }
+    .prediction-wait {
+        color: orange;
+        background-color: #fff3cd;
+    }
+    .prediction-okay {
+        color: blue;
+        background-color: #cce5ff;
+    }
+    .prediction-yes {
+        color: darkgreen;
+        background-color: #c3e6cb;
+    }
+
+    /* Price summary styling */
+    #price-summary {
+        display: flex;
+        justify-content: space-around;
+        font-size: 1.2em; /* Adjusted font size */
+    }
+    .price {
+        padding: 10px;
+        border-radius: 5px;
+        color: white; /* Default text color */
+    }
+    .lowest {
+        background-color: #28a745; /* Green for lowest price */
+    }
+    .current {
+        background-color: #007bff; /* Blue for current price */
+    }
+    .average {
+        background-color: #ffc107; /* Yellow for average price */
+    }
+    .highest {
+        background-color: 'black'; /* Red for highest price */
+    }
+    .price-info {
+        display: flex; /* Use flexbox for alignment */
+        justify-content: space-between; /* Distribute space evenly */
+        margin-bottom: 10px; /* Space below the summary */
+    }
+    
+    .price-info span {
+        display: inline-block; /* Allow width and height settings */
+        padding: 5px 10px; /* Small padding */
+        margin-right: 10px; /* Space between items */
+        border: none; /* Remove border */
+        border-radius: 5px; /* Rounded corners */
+        color: #333; /* Text color */
+        font-size: 14px; /* Smaller font size */
+        text-align: center; /* Center text */
+        transition: background-color 0.3s; /* Smooth transition for hover */
+    }
+
+    /* Specific background colors for each price category */
+    .lowest {
+        background-color: #d4edda; /* Light green for lowest price */
+    }
+    .current {
+        background-color: #fff3cd; /* Light yellow for current price */
+    }
+    .average {
+        background-color: #cce5ff; /* Light blue for average price */
+    }
+    .highest {
+        background-color: black; /* Light red for highest price */
+    }
+
+    /* Add hover effect */
+    .price-info span:hover {
+        opacity: 0.7; /* Slightly change opacity on hover */
+    }
+</style>
+{% endblock %}

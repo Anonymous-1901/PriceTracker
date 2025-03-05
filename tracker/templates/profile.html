@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Profile - Price Tracker{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h2 class="text-center">User Profile</h2>
+
+            <div id="alert-container" style="display:none;"></div>
+
+            <div id="profile-info" class="mb-4">
+                <p><strong>Username:</strong> <span id="username">{{ user.username }}</span></p>
+                <p><strong>Email:</strong> <span id="email">{{ user.email }}</span></p>
+            </div>
+
+            <form id="edit-profile-form" style="display:none;">
+                <div class="form-group">
+                    <label for="edit-username">Username</label>
+                    <input type="text" class="form-control" id="edit-username" value="{{ user.username }}">
+                </div>
+                <div class="form-group">
+                    <label for="edit-email">Email</label>
+                    <input type="email" class="form-control" id="edit-email" value="{{ user.email }}">
+                </div>
+                <button type="button" class="btn btn-success mt-2" id="save-profile">Save</button>
+            </form>
+
+            <button class="btn btn-primary mt-2" id="edit-button">Edit</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('edit-button').onclick = function() {
+        document.getElementById('profile-info').style.display = 'none';
+        document.getElementById('edit-profile-form').style.display = 'block';
+    };
+
+    document.getElementById('save-profile').onclick = function() {
+        const updatedUserData = {
+            username: document.getElementById('edit-username').value,
+            email: document.getElementById('edit-email').value,
+        };
+
+        fetch("{% url 'profile' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: new URLSearchParams(updatedUserData),
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Clear previous alerts
+            let alertContainer = document.getElementById('alert-container');
+            alertContainer.innerHTML = ''; // Clear previous messages
+
+            if (data.success) {
+                // Show success message
+                let successAlert = document.createElement('div');
+                successAlert.className = 'alert alert-info';
+                successAlert.innerHTML = 'Profile updated successfully!';
+                alertContainer.appendChild(successAlert);
+                alertContainer.style.display = 'block';
+
+                // Update displayed user info
+                document.getElementById('username').innerText = updatedUserData.username;
+                document.getElementById('email').innerText = updatedUserData.email;
+
+                document.getElementById('edit-profile-form').style.display = 'none';
+                document.getElementById('profile-info').style.display = 'block';
+            } else {
+                // Display errors
+                let errorAlert = document.createElement('div');
+                errorAlert.className = 'alert alert-danger';
+                errorAlert.innerHTML = '';  // Clear previous messages
+
+                data.errors.forEach(error => {
+                    errorAlert.innerHTML += `<div>${error}</div>`;
+                });
+                alertContainer.appendChild(errorAlert);
+                alertContainer.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    };
+</script>
+{% endblock %}

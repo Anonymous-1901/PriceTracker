@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Alerts - Price Tracker{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center mb-5">My Alerts</h2>
+
+    <div class="row">
+        {% for alert in alerts %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-img-container">
+                    <img src="{{ alert.product_image_url }}" class="card-img" alt="Product Image">
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ alert.product_name }}</h5>
+                    <p class="card-text">
+                        <strong>Desired Price:</strong> ₹{{ alert.desired_price }}<br>
+                        <strong>Alert Completed:</strong> 
+                        {% if alert.alert_sent %}
+                            Yes
+                        {% else %}
+                            No
+                        {% endif %}
+                    </p>
+                    <a href="#" class="btn btn-danger" onclick="showConfirmButton(event, '{{ alert.id }}'); return false;">Delete Alert</a>
+                    <div class="confirmation-message" id="confirmation-message-{{ alert.id }}" style="display: none; margin-top: 10px; color: green;">
+                        Alert deleted successfully.
+                    </div>
+                    <button class="btn btn-warning btn-sm" id="confirm-delete-{{ alert.id }}" style="display: none;" onclick="confirmDelete(event, '{{ alert.id }}');">Confirm Delete</button>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-md-12">
+            <div class="alert alert-info text-center">
+                No alerts found for your account.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.card-img-container {
+    height: 200px; /* Fixed height for the image container */
+    overflow: hidden; /* Hide any overflow */
+}
+
+.card-img {
+    width: 100%; /* Full width of the container */
+    height: 100%; /* Full height of the container */
+    object-fit: cover; /* Cover the entire area */
+    display: block; /* Remove any space below the image */
+}
+
+.card-body {
+    padding: 1.5rem; /* Consistent padding for card body */
+}
+</style>
+
+<script>
+    function showConfirmButton(event, alertId) {
+        event.preventDefault(); // Prevent default action
+        
+        // Show confirmation button
+        const confirmButton = document.getElementById(`confirm-delete-${alertId}`);
+        confirmButton.style.display = 'inline-block'; // Show the confirmation button
+    }
+
+    function confirmDelete(event, alertId) {
+        event.preventDefault(); // Prevent default action
+    
+        // Send POST request to delete the alert
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken'), // CSRF token for security
+            },
+            body: new URLSearchParams({
+                'alert_id': alertId
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                // Hide the alert card or update the UI as needed
+                document.getElementById(`confirmation-message-${alertId}`).style.display = 'block'; // Show success message
+                document.getElementById(`confirm-delete-${alertId}`).style.display = 'none'; // Hide confirm button
+                // Optionally, you could also hide the entire card or remove it from the DOM
+                // document.getElementById(`alert-card-${alertId}`).remove(); // If you assign an ID to the card
+                console.log('Alert deleted successfully');
+            } else {
+                console.error('Error deleting alert');
+            }
+        });
+    }
+    
+    // Helper function to get the CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

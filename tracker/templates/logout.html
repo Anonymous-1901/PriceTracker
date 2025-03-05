@@ -1,0 +1,14 @@
+<!-- logout.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Logged Out - Price Tracker{% endblock %}
+
+{% block content %}
+<div class="text-center mt-5">
+    <h1>You have been logged out</h1>
+    <p>Thank you for using Price Tracker. We hope to see you again soon!</p>
+    <a href="{% url 'login' %}" class="btn btn-primary">Login Again</a>
+    <a href="{% url 'register' %}" class="btn btn-secondary">Register Another User</a>
+</div>
+{% endblock %}

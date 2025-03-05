@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}Register - Price Tracker{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h2 class="text-center">Register</h2>
+
+        {% if form.errors %}
+            <div class="alert alert-danger">
+                <ul>
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li>{{ field.label }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="id_username">Username</label>
+                <input type="text" name="username" placeholder="Username" class="form-control" id="id_username">
+                {% if form.username.errors %}
+                    <div class="text-danger">
+                        {{ form.username.errors.as_text }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="id_email">Email</label>
+                <input type="email" placeholder="E-mail ID" name="email" class="form-control" id="id_email">
+                {% if form.email.errors %}
+                    <div class="text-danger">
+                        {{ form.email.errors.as_text }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="id_password1">Password</label>
+                <input type="password" placeholder="Password" name="password1" class="form-control" id="id_password1">
+                {% if form.password1.errors %}
+                    <div class="text-danger">
+                        {{ form.password1.errors.as_text }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="id_password2">Confirm Password</label>
+                <input type="password" name="password2" placeholder="Re-enter Password" class="form-control" id="id_password2">
+                {% if form.password2.errors %}
+                    <div class="text-danger">
+                        {{ form.password2.errors.as_text }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Register</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
